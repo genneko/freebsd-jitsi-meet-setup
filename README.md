@@ -33,6 +33,6 @@ A shell script which helps you set up jitsi-meet on a FreeBSD host
   ```
 
 - Nginx, no authentiation and NAT
-  ```sh
+  ```
   # ./setup.sh -N 192.168.10.5:10.1.1.5 jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
   ```
