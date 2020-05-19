@@ -14,23 +14,23 @@
 # - If you want to require authentication for room creation, specify -r flag.
 #   Otherwise, anyone can create a conference room.
 #
-# - If your jitsi-meet server is behind a NAT, specify -n LOCAL:PUBLIC
+# - If your jitsi-meet server is behind a NAT, specify -N LOCAL:PUBLIC
 #   where LOCAL is a private IP address actually configured on the server and
 #   PUBLIC is a public IP address on a NAT box to which the LOCAL address is
 #   translated.
 #
 # EXAMPLES
 # - Nginx, no authentiation and no NAT
-#   # ./setup.sh jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
-#
+#   # ./setup.sh jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
+
 # - Apache24, no authentication and no NAT
-#   # ./setup.sh -a jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+#   # ./setup.sh -a jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
 #
 # - Nginx, authentiation and no NAT
-#   # ./setup.sh -r jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+#   # ./setup.sh -r jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
 #
 # - Nginx, no authentiation and NAT
-#   # ./setup.sh -n 192.168.10.5:10.1.1.5 jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+#   # ./setup.sh -N 192.168.10.5:10.1.1.5 /path/to/jitsi.crt /path/to/jitsi.key
 #
 prog=$(basename $0)
 bindir=$(dirname $(readlink -f $0))
