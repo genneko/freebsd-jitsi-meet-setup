@@ -1,0 +1,27 @@
+admins = { "focus@auth.SERVER_FQDN" }
+
+VirtualHost "SERVER_FQDN"
+     authentication = "anonymous"
+     ssl = {
+             key = "/var/db/prosody/SERVER_FQDN.key";
+             certificate = "/var/db/prosody/SERVER_FQDN.crt";
+     }
+     modules_enabled = {
+             "bosh";
+             "pubsub";
+     }
+     c2s_require_encryption = false
+
+VirtualHost "auth.SERVER_FQDN"
+     authentication = "internal_plain"
+     ssl = {
+             key = "/var/db/prosody/auth.SERVER_FQDN.key";
+             certificate = "/var/db/prosody/auth.SERVER_FQDN.crt";
+     }
+
+Component "conference.SERVER_FQDN" "muc"
+     storage = "memory"
+Component "jitsi-videobridge.SERVER_FQDN"
+     component_secret = "JVB_COMPONENT_SECRET"
+Component "focus.SERVER_FQDN"
+     component_secret = "FOCUS_COMPONENT_SECRET"
