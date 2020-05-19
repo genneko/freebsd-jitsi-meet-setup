@@ -14,25 +14,25 @@ A shell script which helps you set up jitsi-meet on a FreeBSD host
   3. SERVER_KEY_PATH - a full pathname of the server private key.
 - If you use apache24 instead of nginx, specify -a flag.
 - If you want authentication for room creation, specify -r flag.
-- If the server is behind a NAT, specify -n LOCAL:PUBLIC where LOCAL is a private IP address actually assigned to the server and PUBLIC is a public IP address to which the LOCAL address is translated by the NAT.
+- If the server is behind a NAT, specify -N LOCAL:PUBLIC where LOCAL is a private IP address actually assigned to the server and PUBLIC is a public IP address to which the LOCAL address is translated by the NAT.
 
 ## Examples
 - Nginx, no authentiation and no NAT
-  ```shell
-  # ./setup.sh jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+  ```
+  # ./setup.sh jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
   ```
 
 - Apache24, no authentication and no NAT
-  ```shell
-  # ./setup.sh -a jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+  ```
+  # ./setup.sh -a jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
   ```
 
 - Nginx, authentiation and no NAT
-  ```shell
-  # ./setup.sh -r jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+  ```
+  # ./setup.sh -r jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
   ```
 
 - Nginx, no authentiation and NAT
-  ```shell
-  # ./setup.sh -n 192.168.10.5:10.1.1.5 jitsi.example.com /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem
+  ```sh
+  # ./setup.sh -N 192.168.10.5:10.1.1.5 jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
   ```
