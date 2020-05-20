@@ -2,41 +2,20 @@
 #
 # freebsd-jitsi-meet-setup/setup.sh
 #
-# USAGE
-# - This script takes the following three mandatory arguments:
-#   1. SERVER_FQDN - jitsi-meet server's resolvable domain name.
-#   2. SERVER_CERT_PATH - a full pathname of a valid TLS server certificate.
-#                         The certificate has to be verified by clients.
-#   3. SERVER_KEY_PATH - a full pathname of a server private key.
+# https://github.com/genneko/freebsd-jitsi-meet-setup
 #
-# - If you want to use apache24, specify -a flag. Otherwise, nginx is used.
-#
-# - If you want to require authentication for room creation, specify -r flag.
-#   Otherwise, anyone can create a conference room.
-#
-# - If your jitsi-meet server is behind a NAT, specify -N LOCAL:PUBLIC
-#   where LOCAL is a private IP address actually configured on the server and
-#   PUBLIC is a public IP address on a NAT box to which the LOCAL address is
-#   translated.
-#
-# EXAMPLES
-# - Nginx, no authentiation and no NAT
-#   # ./setup.sh jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
-
-# - Apache24, no authentication and no NAT
-#   # ./setup.sh -a jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
-#
-# - Nginx, authentiation and no NAT
-#   # ./setup.sh -r jitsi.example.com /path/to/jitsi.crt /path/to/jitsi.key
-#
-# - Nginx, no authentiation and NAT
-#   # ./setup.sh -N 192.168.10.5:10.1.1.5 /path/to/jitsi.crt /path/to/jitsi.key
-#
-prog=$(basename $0)
-bindir=$(dirname $(readlink -f $0))
+prog=$(basename "$0")
+bindir=$(dirname "$(readlink -f "$0")")
 
 echoerr() {
 	echo "$@" >&2
+}
+
+err_exit() {
+	if [ $# -gt 0 ]; then
+		echoerr "$@"
+	fi
+	exit 1
 }
 
 usage_exit() {
@@ -59,10 +38,10 @@ gen_selfsigned_cert() {
 		fqdn=$1
 		san="DNS:$fqdn"
 		shift
-		for n in $@; do
+		for n in "$@"; do
 			san="$san,DNS:$n"
 		done
-		openssl req -new -x509 -sha256 -keyout $fqdn.key -nodes -out $fqdn.crt -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
+		openssl req -new -x509 -sha256 -keyout "$fqdn.key" -nodes -out "$fqdn.crt" -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
 	fi
 }
 
@@ -83,7 +62,7 @@ do
 		*) usage_exit ;;
 	esac
 done
-shift $(expr $OPTIND - 1)
+shift $(( OPTIND - 1 ))
 
 PRE_CONFIG_LIST=$(cat <<EOB
 usr/local/etc/pkg
@@ -125,7 +104,7 @@ fi
 
 if [ $nat -eq 1 ]; then
 	if [ "$SERVER_LOCAL_IP4ADDR" = "" ] || [ "$SERVER_PUBLIC_IP4ADDR" = "" ]; then
-		usage_exit "Please specify LOCAL:PUBLIC for NAT (e.g. -n 192.168.10.5/10.10.10.5)"
+		usage_exit "Please specify LOCAL:PUBLIC for NAT (e.g. -n 192.168.10.5/10.1.1.5)"
 	fi
 	CONFIG_LIST="$CONFIG_LIST
 usr/local/etc/jitsi/videobridge/sip-communicator.properties"
@@ -151,7 +130,9 @@ FOCUS_USER_SECRET=$(date | md5)
 
 BACKUP_TIMESTAMP=$(date '+%F_%T')
 
-cd $bindir
+cd "$bindir" || err_exit "ERROR: cannot chdir to $bindir."
+
+if [ $installpkg -eq 1 ]; then
 echoerr
 echoerr "###"
 echoerr "### Preparing latest package set"
@@ -177,13 +158,13 @@ for file in $PRE_CONFIG_LIST; do
 			continue
 		fi
 		echoerr "NOTICE: backup /$file.$BACKUP_TIMESTAMP"
-		cp -p /$file /$file.$BACKUP_TIMESTAMP
+		cp -p "/$file" "/$file.$BACKUP_TIMESTAMP"
 	fi
 
 	echoerr "NOTICE: install /$file"
-	cp -p $srcfile /$file
+	cp -p "$srcfile" "/$file"
 done
-
+fi
 
 echoerr
 echoerr "###"
@@ -193,8 +174,7 @@ sleep 1
 missing=
 [ $installpkg -eq 1 ] && pkg update
 for pkg in $PKG_LIST; do
-	pkg_info=$(pkg query %n-%v $pkg 2>/dev/null); 
-	if [ $? -eq 0 ]; then
+	if pkg_info=$(pkg query %n-%v "$pkg" 2>/dev/null); then
 		echoerr "INFO: $pkg_info installed"
 		continue
 	fi
@@ -203,8 +183,7 @@ for pkg in $PKG_LIST; do
 		missing="$missing $pkg"
 	else
 		echoerr -n "NOTICE: $pkg not found. Installing..."
-		pkg install -y $pkg >/dev/null 2>&1
-		if [ $? -eq 0 ]; then
+		if pkg install -y "$pkg" >/dev/null 2>&1; then
 			echoerr "done"
 		else
 			echoerr "failed"
@@ -221,7 +200,6 @@ if [ -n "$missing" ]; then
 fi
 
 
-cd $bindir
 echoerr
 echoerr "###"
 echoerr "### Installing custom config files"
@@ -234,7 +212,7 @@ for file in $CONFIG_LIST; do
 	srcfile="$file"
 	if [ ! -f "$file" ] && [ -f "$file.$mkroom" ]; then
 		srcfile="$file.$mkroom"
-	elif [ $(readlink -f "$file") = "/$file" ]; then
+	elif [ "$(readlink -f "$file")" = "/$file" ]; then
 		echoerr "WARNING: Source and destination files are the same. Skipping..."
 		continue
 	fi
@@ -247,17 +225,17 @@ for file in $CONFIG_LIST; do
 		fi
 		continue
 	fi
-	if [ -n "$srcfile" -a -f "$srcfile" ]; then
+	if [ -n "$srcfile" ] && [ -f "$srcfile" ]; then
 		m4 \
-			-DSERVER_FQDN=$SERVER_FQDN \
-			-DSERVER_CERT_PATH=$SERVER_CERT_PATH \
-			-DSERVER_KEY_PATH=$SERVER_KEY_PATH \
-			-DJVB_COMPONENT_SECRET=$JVB_COMPONENT_SECRET \
-			-DFOCUS_COMPONENT_SECRET=$FOCUS_COMPONENT_SECRET \
-			-DFOCUS_USER_SECRET=$FOCUS_USER_SECRET \
-			-DSERVER_LOCAL_IP4ADDR=$SERVER_LOCAL_IP4ADDR \
-			-DSERVER_PUBLIC_IP4ADDR=$SERVER_PUBLIC_IP4ADDR \
-			$srcfile > /$file.tmp
+			-DSERVER_FQDN="$SERVER_FQDN" \
+			-DSERVER_CERT_PATH="$SERVER_CERT_PATH" \
+			-DSERVER_KEY_PATH="$SERVER_KEY_PATH" \
+			-DJVB_COMPONENT_SECRET="$JVB_COMPONENT_SECRET" \
+			-DFOCUS_COMPONENT_SECRET="$FOCUS_COMPONENT_SECRET" \
+			-DFOCUS_USER_SECRET="$FOCUS_USER_SECRET" \
+			-DSERVER_LOCAL_IP4ADDR="$SERVER_LOCAL_IP4ADDR" \
+			-DSERVER_PUBLIC_IP4ADDR="$SERVER_PUBLIC_IP4ADDR" \
+			"$srcfile" > "/$file.tmp"
 
 		if [ -e "/$file" ]; then
 			if cmp -s "/$file.tmp" "/$file"; then
@@ -266,11 +244,11 @@ for file in $CONFIG_LIST; do
 				continue
 			fi
 			echoerr "NOTICE: backup /$file.$BACKUP_TIMESTAMP"
-			cp -p /$file /$file.$BACKUP_TIMESTAMP
+			cp -p "/$file" "/$file.$BACKUP_TIMESTAMP"
 		fi
 		echoerr "NOTICE: install /$file"
-		cp -p /$file.tmp /$file
-		rm -f /$file.tmp
+		cp -p "/$file.tmp" "/$file"
+		rm -f "/$file.tmp"
 	fi
 done
 
@@ -290,28 +268,30 @@ key2=auth.$SERVER_FQDN.key
 jksdir=/usr/local/etc/jitsi/jicofo
 jks=truststore.jks
 
-cd $certdir
-[ -f "$key1" ] && echoerr "NOTICE: backup; $PWD/$key1.$BACKUP_TIMESTAMP" && cp -p $key1 $key1.$BACKUP_TIMESTAMP
-[ -f "$crt1" ] && echoerr "NOTICE: backup; $PWD/$crt1.$BACKUP_TIMESTAMP" && cp -p $crt1 $crt1.$BACKUP_TIMESTAMP
-gen_selfsigned_cert $SERVER_FQDN jitsi-videobridge.$SERVER_FQDN conference.$SERVER_FQDN focus.$SERVER_FQDN auth.$SERVER_FQDN
+cd $certdir && {
+	[ -f "$key1" ] && echoerr "NOTICE: backup; $PWD/$key1.$BACKUP_TIMESTAMP" && cp -p "$key1" "$key1.$BACKUP_TIMESTAMP"
+	[ -f "$crt1" ] && echoerr "NOTICE: backup; $PWD/$crt1.$BACKUP_TIMESTAMP" && cp -p "$crt1" "$crt1.$BACKUP_TIMESTAMP"
+	gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN"
 
-[ -f "$key2" ] && echoerr "NOTICE: backup; $PWD/$key2.$BACKUP_TIMESTAMP" && cp -p $key2 $key2.$BACKUP_TIMESTAMP
-[ -f "$crt2" ] && echoerr "NOTICE: backup; $PWD/$crt2.$BACKUP_TIMESTAMP" && cp -p $crt2 $crt2.$BACKUP_TIMESTAMP
-gen_selfsigned_cert auth.$SERVER_FQDN
+	[ -f "$key2" ] && echoerr "NOTICE: backup; $PWD/$key2.$BACKUP_TIMESTAMP" && cp -p "$key2" "$key2.$BACKUP_TIMESTAMP"
+	[ -f "$crt2" ] && echoerr "NOTICE: backup; $PWD/$crt2.$BACKUP_TIMESTAMP" && cp -p "$crt2" "$crt2.$BACKUP_TIMESTAMP"
+	gen_selfsigned_cert "auth.$SERVER_FQDN"
+}
 
-cd $jksdir
-[ -f "$jks" ] && echoerr "NOTICE: backup; $PWD/$jks.$BACKUP_TIMESTAMP" && cp -p $jks $jks.$BACKUP_TIMESTAMP && keytool -delete -noprompt -keystore $jks -alias prosody -storepass changeit
-keytool -importcert -noprompt -keystore $jks -alias prosody -storepass changeit -file $certdir/$crt2
+cd $jksdir && {
+	[ -f "$jks" ] && echoerr "NOTICE: backup; $PWD/$jks.$BACKUP_TIMESTAMP" && cp -p "$jks" "$jks.$BACKUP_TIMESTAMP" && keytool -delete -noprompt -keystore $jks -alias prosody -storepass changeit
+	keytool -importcert -noprompt -keystore "$jks" -alias prosody -storepass changeit -file "$certdir/$crt2"
+}
 
 echoerr
 echoerr "###"
 echoerr "### Enabling services"
 echoerr "###"
 sleep 1
-service prosody enable
-service $webserver enable
-service jitsi-videobridge enable
-service jicofo enable
+sysrc prosody_enable=YES
+sysrc "${webserver}_enable=YES"
+sysrc jitsi_videobridge_enable=YES
+sysrc jicofo_enable=YES
 
 echoerr
 echoerr "###"
@@ -337,10 +317,10 @@ echoerr
 echoerr "If you are using PF, add rules like below to /etc/pf.conf and"
 echoerr "reload the PF by 'service pf reload'."
 echoerr "(tighten those rules according to your needs)"
-echoerr "    # $ext_if is an interface name which has $SERVER_PUBLIC_IP4ADDR"
-echoerr "    rdr pass inet proto tcp to ($ext_if) port 443 -> $SERVER_LOCAL_IP4ADDR"
-echoerr "    rdr pass inet proto tcp to ($ext_if) port 4443 -> $SERVER_LOCAL_IP4ADDR"
-echoerr "    rdr pass inet proto udp to ($ext_if) port 10000 -> $SERVER_LOCAL_IP4ADDR"
+echoerr "    # \$ext_if is an interface name which has $SERVER_PUBLIC_IP4ADDR"
+echoerr "    rdr pass inet proto tcp to (\$ext_if) port 443 -> $SERVER_LOCAL_IP4ADDR"
+echoerr "    rdr pass inet proto tcp to (\$ext_if) port 4443 -> $SERVER_LOCAL_IP4ADDR"
+echoerr "    rdr pass inet proto udp to (\$ext_if) port 10000 -> $SERVER_LOCAL_IP4ADDR"
 else
 echoerr
 echoerr "If you are using PF, add rules like below to /etc/pf.conf and"
