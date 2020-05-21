@@ -102,6 +102,11 @@ usr/local/etc/nginx/nginx.conf"
 nginx"
 fi
 
+if [ $mkroom = "auth" ]; then
+	CONFIG_LIST="$CONFIG_LIST
+/usr/local/etc/jitsi/jicofo/sip-communicator.properties"
+fi
+
 if [ $nat -eq 1 ]; then
 	if [ "$SERVER_LOCAL_IP4ADDR" = "" ] || [ "$SERVER_PUBLIC_IP4ADDR" = "" ]; then
 		usage_exit "Please specify LOCAL:PUBLIC for NAT (e.g. -n 192.168.10.5/10.1.1.5)"
