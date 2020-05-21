@@ -1,4 +1,5 @@
 pidfile = "/var/run/prosody/prosody.pid"
+https_ports = {}
 
 -- Prosody Example Configuration File
 --
@@ -183,6 +184,11 @@ certificates = "certs"
 -- Settings under each VirtualHost entry apply *only* to that host.
 
 VirtualHost "localhost"
+	ssl = {
+		key = "/var/db/prosody/localhost.key";
+		certificate = "/var/db/prosody/localhost.crt";
+	}
+	c2s_require_encryption = false
 
 --VirtualHost "example.com"
 --	certificate = "/path/to/example.crt"

@@ -261,6 +261,8 @@ sleep 1
 #prosodyctl cert generate auth.$SERVER_FQDN
 
 certdir=/var/db/prosody
+crt0=localhost.crt
+key0=localhost.key
 crt1=$SERVER_FQDN.crt
 key1=$SERVER_FQDN.key
 crt2=auth.$SERVER_FQDN.crt
@@ -269,6 +271,10 @@ jksdir=/usr/local/etc/jitsi/jicofo
 jks=truststore.jks
 
 cd $certdir && {
+	[ -f "$key0" ] && echoerr "NOTICE: backup; $PWD/$key0.$BACKUP_TIMESTAMP" && cp -p "$key0" "$key0.$BACKUP_TIMESTAMP"
+	[ -f "$crt0" ] && echoerr "NOTICE: backup; $PWD/$crt0.$BACKUP_TIMESTAMP" && cp -p "$crt0" "$crt0.$BACKUP_TIMESTAMP"
+	gen_selfsigned_cert localhost
+
 	[ -f "$key1" ] && echoerr "NOTICE: backup; $PWD/$key1.$BACKUP_TIMESTAMP" && cp -p "$key1" "$key1.$BACKUP_TIMESTAMP"
 	[ -f "$crt1" ] && echoerr "NOTICE: backup; $PWD/$crt1.$BACKUP_TIMESTAMP" && cp -p "$crt1" "$crt1.$BACKUP_TIMESTAMP"
 	gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN"
