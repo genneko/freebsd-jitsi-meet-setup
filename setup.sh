@@ -260,6 +260,15 @@ sleep 1
 prosodyctl deluser "focus@auth.$SERVER_FQDN" >/dev/null 2>&1
 prosodyctl register focus "auth.$SERVER_FQDN" "$FOCUS_USER_SECRET"
 
+if [ "$mkroom" = "auth" ]; then
+	echoerr
+	echoerr "###"
+	echoerr "### Adding an XMPP user to create conference rooms"
+	echoerr "###"
+	sleep 1
+	prosodyctl adduser "admin@$SERVER_FQDN" 
+fi
+
 echoerr
 echoerr "###"
 echoerr "### Generating certificates used by internal processes"
