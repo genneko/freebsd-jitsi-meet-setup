@@ -273,15 +273,15 @@ jks=truststore.jks
 cd $certdir && {
 	[ -f "$key0" ] && echoerr "NOTICE: backup; $PWD/$key0.$BACKUP_TIMESTAMP" && cp -p "$key0" "$key0.$BACKUP_TIMESTAMP"
 	[ -f "$crt0" ] && echoerr "NOTICE: backup; $PWD/$crt0.$BACKUP_TIMESTAMP" && cp -p "$crt0" "$crt0.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert localhost
+	gen_selfsigned_cert localhost && chown prosody:prosody "$key0" "$crt0"
 
 	[ -f "$key1" ] && echoerr "NOTICE: backup; $PWD/$key1.$BACKUP_TIMESTAMP" && cp -p "$key1" "$key1.$BACKUP_TIMESTAMP"
 	[ -f "$crt1" ] && echoerr "NOTICE: backup; $PWD/$crt1.$BACKUP_TIMESTAMP" && cp -p "$crt1" "$crt1.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN"
+	gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$key1" "$crt1"
 
 	[ -f "$key2" ] && echoerr "NOTICE: backup; $PWD/$key2.$BACKUP_TIMESTAMP" && cp -p "$key2" "$key2.$BACKUP_TIMESTAMP"
 	[ -f "$crt2" ] && echoerr "NOTICE: backup; $PWD/$crt2.$BACKUP_TIMESTAMP" && cp -p "$crt2" "$crt2.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert "auth.$SERVER_FQDN"
+	gen_selfsigned_cert "auth.$SERVER_FQDN" && chown prosody:prosody "$key2" "$crt2"
 }
 
 cd $jksdir && {
