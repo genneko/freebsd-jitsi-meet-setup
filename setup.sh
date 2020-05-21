@@ -124,9 +124,9 @@ if [ -z "$SERVER_KEY_PATH" ]; then
 	usage_exit "Please specify SERVER_KEY_PATH (e.g. /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem)."
 fi
 
-JVB_COMPONENT_SECRET=$(date | md5)
-FOCUS_COMPONENT_SECRET=$(date | md5)
-FOCUS_USER_SECRET=$(date | md5)
+JVB_COMPONENT_SECRET=$(openssl rand -hex 16)
+FOCUS_COMPONENT_SECRET=$(openssl rand -hex 16)
+FOCUS_USER_SECRET=$(openssl rand -hex 16)
 
 BACKUP_TIMESTAMP=$(date '+%F_%T')
 
