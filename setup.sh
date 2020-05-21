@@ -104,7 +104,7 @@ fi
 
 if [ $mkroom = "auth" ]; then
 	CONFIG_LIST="$CONFIG_LIST
-/usr/local/etc/jitsi/jicofo/sip-communicator.properties"
+usr/local/etc/jitsi/jicofo/sip-communicator.properties"
 fi
 
 if [ $nat -eq 1 ]; then
