@@ -254,6 +254,14 @@ done
 
 echoerr
 echoerr "###"
+echoerr "### Adding an XMPP user for internal use"
+echoerr "###"
+sleep 1
+prosodyctl deluser "focus@auth.$SERVER_FQDN" >/dev/null 2>&1
+prosodyctl register focus "auth.$SERVER_FQDN" "$FOCUS_USER_SECRET"
+
+echoerr
+echoerr "###"
 echoerr "### Generating certificates used by internal processes"
 echoerr "###"
 sleep 1
