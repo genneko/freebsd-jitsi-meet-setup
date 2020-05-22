@@ -34,7 +34,12 @@ usage_exit() {
 }
 
 gen_selfsigned_cert() {
-	local fqdn san
+	local fqdn san certdir
+	if [ -n "$CERTDIR" ]; then
+		certdir=$CERTDIR
+	else
+		certdir=.
+	fi
 	if [ $# -ge 1 ]; then
 		fqdn=$1
 		san="DNS:$fqdn"
@@ -42,7 +47,7 @@ gen_selfsigned_cert() {
 		for n in "$@"; do
 			san="$san,DNS:$n"
 		done
-		openssl req -new -x509 -sha256 -keyout "$fqdn.key" -nodes -out "$fqdn.crt" -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
+		openssl req -new -x509 -sha256 -keyout "$certdir/$fqdn.key" -nodes -out "$certdir/$fqdn.crt" -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
 	fi
 }
 
