@@ -22,8 +22,9 @@ usage_exit() {
 	if [ $# -gt 0 ]; then
 		echoerr "$@"
 	fi
-	echoerr "usage: $prog [-apr] [-n LOCAL:PUBLIC] FQDN CERT_PATH KEY_PATH"
+	echoerr "usage: $prog [-aBpr] [-n LOCAL:PUBLIC] FQDN CERT_PATH KEY_PATH"
 	echoerr "       -a: use apache web server instead of nginx"
+	echoerr "       -B: do not backup existing files"
 	echoerr "       -p: install missing packages instead of exiting with an error."
 	echoerr "       -r: require authentication for room creation"
 	echoerr "           (without this flag, any user can create a room)"
@@ -45,14 +46,24 @@ gen_selfsigned_cert() {
 	fi
 }
 
+backup_file() {
+	local file=$1 ts=$2
+	[ "$dobackup" -eq 0 ] && return 1
+	[ -f "$file" ] || return 1
+	echoerr "NOTICE: backup $file.$ts"
+	cp -p "$file" "$file.$ts"
+}
+
 webserver=nginx
+dobackup=1
 installpkg=0
 mkroom=anon
 nat=0
-while getopts "aprN:" opt
+while getopts "aBprN:" opt
 do
 	case "$opt" in
 		a) webserver=apache24 ;;
+		B) dobackup=0 ;;
 		p) installpkg=1 ;;
 		r) mkroom=auth ;;
 		N) nat=1
@@ -133,7 +144,7 @@ JVB_COMPONENT_SECRET=$(openssl rand -hex 16)
 FOCUS_COMPONENT_SECRET=$(openssl rand -hex 16)
 FOCUS_USER_SECRET=$(openssl rand -hex 16)
 
-BACKUP_TIMESTAMP=$(date '+%F_%T')
+TS=$(date '+%F_%T')
 
 cd "$bindir" || err_exit "ERROR: cannot chdir to $bindir."
 
@@ -162,8 +173,7 @@ for file in $PRE_CONFIG_LIST; do
 			echoerr "INFO: already there /$file"
 			continue
 		fi
-		echoerr "NOTICE: backup /$file.$BACKUP_TIMESTAMP"
-		cp -p "/$file" "/$file.$BACKUP_TIMESTAMP"
+		backup_file "/$file" "$TS"
 	fi
 
 	echoerr "NOTICE: install /$file"
@@ -248,8 +258,7 @@ for file in $CONFIG_LIST; do
 				rm -f "/$file.tmp"
 				continue
 			fi
-			echoerr "NOTICE: backup /$file.$BACKUP_TIMESTAMP"
-			cp -p "/$file" "/$file.$BACKUP_TIMESTAMP"
+			backup_file "/$file" "$ts"
 		fi
 		echoerr "NOTICE: install /$file"
 		cp -p "/$file.tmp" "/$file"
@@ -282,34 +291,31 @@ sleep 1
 #prosodyctl cert generate $SERVER_FQDN
 #prosodyctl cert generate auth.$SERVER_FQDN
 
-certdir=/var/db/prosody
-crt0=localhost.crt
-key0=localhost.key
-crt1=$SERVER_FQDN.crt
-key1=$SERVER_FQDN.key
-crt2=auth.$SERVER_FQDN.crt
-key2=auth.$SERVER_FQDN.key
-jksdir=/usr/local/etc/jitsi/jicofo
-jks=truststore.jks
+CERTDIR=/var/db/prosody
+CRT0=$CERTDIR/localhost.crt
+KEY0=$CERTDIR/localhost.key
+CRT1=$CERTDIR/$SERVER_FQDN.crt
+KEY1=$CERTDIR/$SERVER_FQDN.key
+CRT2=$CERTDIR/auth.$SERVER_FQDN.crt
+KEY2=$CERTDIR/auth.$SERVER_FQDN.key
+JKSDIR=/usr/local/etc/jitsi/jicofo
+JKS=$JKSDIR/truststore.jks
 
-cd $certdir && {
-	[ -f "$key0" ] && echoerr "NOTICE: backup; $PWD/$key0.$BACKUP_TIMESTAMP" && cp -p "$key0" "$key0.$BACKUP_TIMESTAMP"
-	[ -f "$crt0" ] && echoerr "NOTICE: backup; $PWD/$crt0.$BACKUP_TIMESTAMP" && cp -p "$crt0" "$crt0.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert localhost && chown prosody:prosody "$key0" "$crt0"
+backup_file "$KEY0" "$ts"
+backup_file "$CRT0" "$ts"
+gen_selfsigned_cert localhost && chown prosody:prosody "$KEY0" "$CRT0"
 
-	[ -f "$key1" ] && echoerr "NOTICE: backup; $PWD/$key1.$BACKUP_TIMESTAMP" && cp -p "$key1" "$key1.$BACKUP_TIMESTAMP"
-	[ -f "$crt1" ] && echoerr "NOTICE: backup; $PWD/$crt1.$BACKUP_TIMESTAMP" && cp -p "$crt1" "$crt1.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$key1" "$crt1"
+backup_file "$KEY1" "$ts"
+backup_file "$CRT1" "$ts"
+gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY1" "$CRT1"
 
-	[ -f "$key2" ] && echoerr "NOTICE: backup; $PWD/$key2.$BACKUP_TIMESTAMP" && cp -p "$key2" "$key2.$BACKUP_TIMESTAMP"
-	[ -f "$crt2" ] && echoerr "NOTICE: backup; $PWD/$crt2.$BACKUP_TIMESTAMP" && cp -p "$crt2" "$crt2.$BACKUP_TIMESTAMP"
-	gen_selfsigned_cert "auth.$SERVER_FQDN" && chown prosody:prosody "$key2" "$crt2"
-}
+backup_file "$KEY2" "$ts"
+backup_file "$CRT2" "$ts"
+gen_selfsigned_cert "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY2" "$CRT2"
 
-cd $jksdir && {
-	[ -f "$jks" ] && echoerr "NOTICE: backup; $PWD/$jks.$BACKUP_TIMESTAMP" && cp -p "$jks" "$jks.$BACKUP_TIMESTAMP" && keytool -delete -noprompt -keystore $jks -alias prosody -storepass changeit
-	keytool -importcert -noprompt -keystore "$jks" -alias prosody -storepass changeit -file "$certdir/$crt2"
-}
+backup_file "$JKS" "$ts"
+[ -f "$JKS" ] && keytool -delete -noprompt -keystore $JKS -alias prosody -storepass changeit
+keytool -importcert -noprompt -keystore "$JKS" -alias prosody -storepass changeit -file "$CRT2"
 
 echoerr
 echoerr "###"
