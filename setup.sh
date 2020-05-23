@@ -102,18 +102,25 @@ usr/local/etc/prosody/conf.d/jitsi.cfg.lua
 usr/local/etc/jitsi/videobridge/jitsi-videobridge.conf
 usr/local/etc/jitsi/jicofo/jicofo.conf
 usr/local/www/jitsi-meet/config.js
+usr/local/etc/newsyslog.conf.d
+usr/local/etc/newsyslog.conf.d/jitsi-videobridge.conf
+usr/local/etc/newsyslog.conf.d/jicofo.conf
 EOB
 )
 
 if [ $webserver = "apache24" ]; then
 	CONFIG_LIST="$CONFIG_LIST
 usr/local/etc/apache24/httpd.conf
-usr/local/etc/apache24/extra/httpd-ssl.conf"
+usr/local/etc/apache24/extra/httpd-ssl.conf
+usr/local/etc/newsyslog.conf.d
+usr/local/etc/newsyslog.conf.d/apache24.conf"
 	PKG_LIST="$PKG_LIST
 apache24"
 else
 	CONFIG_LIST="$CONFIG_LIST
-usr/local/etc/nginx/nginx.conf"
+usr/local/etc/nginx/nginx.conf
+usr/local/etc/newsyslog.conf.d
+usr/local/etc/newsyslog.conf.d/nginx.conf"
 	PKG_LIST="$PKG_LIST
 nginx"
 fi
