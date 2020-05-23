@@ -1,9 +1,9 @@
 # freebsd-jitsi-meet-setup
-A shell script which helps you set up jitsi-meet on a FreeBSD host
+A personal shell script which performs the initial configuration of a jitsi-meet server on FreeBSD
 
 ## Prerequisites
 - You've installed jitsi-meet, jitsi-videobridge, jicofo, prosody and a webserver (either nginx or apache24) from ports or packages (optionally they can be installed by the script).
-- You've got a valid TLS server certificate and a private key for the server. The certificate has to be verified by clients' web browsers.
+- You've got a valid TLS server certificate and a private key for the server. The certificate has to be verifiable by clients' web browsers.
 
 ## Usage
 - Clone this repository anywhere you want.
