@@ -297,18 +297,12 @@ sleep 1
 #prosodyctl cert generate auth.$SERVER_FQDN
 
 CERTDIR=/var/db/prosody
-CRT0=$CERTDIR/localhost.crt
-KEY0=$CERTDIR/localhost.key
 CRT1=$CERTDIR/$SERVER_FQDN.crt
 KEY1=$CERTDIR/$SERVER_FQDN.key
 CRT2=$CERTDIR/auth.$SERVER_FQDN.crt
 KEY2=$CERTDIR/auth.$SERVER_FQDN.key
 JKSDIR=/usr/local/etc/jitsi/jicofo
 JKS=$JKSDIR/truststore.jks
-
-backup_file "$KEY0" "$ts"
-backup_file "$CRT0" "$ts"
-gen_selfsigned_cert localhost && chown prosody:prosody "$KEY0" "$CRT0"
 
 backup_file "$KEY1" "$ts"
 backup_file "$CRT1" "$ts"

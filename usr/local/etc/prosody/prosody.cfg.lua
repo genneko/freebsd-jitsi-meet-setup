@@ -183,12 +183,7 @@ certificates = "certs"
 -- You need to add a VirtualHost entry for each domain you wish Prosody to serve.
 -- Settings under each VirtualHost entry apply *only* to that host.
 
-VirtualHost "localhost"
-	ssl = {
-		key = "/var/db/prosody/localhost.key";
-		certificate = "/var/db/prosody/localhost.crt";
-	}
-	c2s_require_encryption = false
+--VirtualHost "localhost"
 
 --VirtualHost "example.com"
 --	certificate = "/path/to/example.crt"
