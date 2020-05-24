@@ -103,8 +103,6 @@ usr/local/etc/jitsi/videobridge/jitsi-videobridge.conf
 usr/local/etc/jitsi/jicofo/jicofo.conf
 usr/local/www/jitsi-meet/config.js
 usr/local/etc/newsyslog.conf.d
-usr/local/etc/newsyslog.conf.d/jitsi-videobridge.conf
-usr/local/etc/newsyslog.conf.d/jicofo.conf
 EOB
 )
 
