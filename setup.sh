@@ -22,7 +22,7 @@ usage_exit() {
 	if [ $# -gt 0 ]; then
 		echoerr "$@"
 	fi
-	echoerr "usage: $prog [-aBpr] [-n LOCAL:PUBLIC] FQDN CERT_PATH KEY_PATH"
+	echoerr "usage: $prog [-aBpr] [-n LOCAL:PUBLIC] [-e DAYS] FQDN CERT_PATH KEY_PATH"
 	echoerr "       -a: use apache web server instead of nginx"
 	echoerr "       -B: do not backup existing files"
 	echoerr "       -p: install missing packages instead of exiting with an error."
@@ -30,11 +30,12 @@ usage_exit() {
 	echoerr "           (without this flag, any user can create a room)"
 	echoerr "       -N LOCAL:PUBLIC: specify local/public IPv4 addresses"
 	echoerr "	                 when using jitsi-meet behind a NAT"
+	echoerr "       -e DAYS: duration of self-signed certs used by prosody (default 365)."
 	exit 1
 }
 
 gen_selfsigned_cert() {
-	local fqdn san certdir
+	local fqdn expiry san certdir
 	if [ -n "$CERTDIR" ]; then
 		certdir=$CERTDIR
 	else
@@ -44,10 +45,13 @@ gen_selfsigned_cert() {
 		fqdn=$1
 		san="DNS:$fqdn"
 		shift
+		expiry=$1
+		[ "$expiry" -lt 1 ] && expiry=365
+		shift
 		for n in "$@"; do
 			san="$san,DNS:$n"
 		done
-		openssl req -new -x509 -sha256 -keyout "$certdir/$fqdn.key" -nodes -out "$certdir/$fqdn.crt" -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
+		openssl req -new -x509 -days $expiry -sha256 -keyout "$certdir/$fqdn.key" -nodes -out "$certdir/$fqdn.crt" -subj "/C=JP/O=Prosody/CN=$fqdn" -addext "subjectAltName = $san"
 	fi
 }
 
@@ -64,7 +68,8 @@ dobackup=1
 installpkg=0
 mkroom=anon
 nat=0
-while getopts "aBprN:" opt
+certexpiry=365
+while getopts "aBprN:e:" opt
 do
 	case "$opt" in
 		a) webserver=apache24 ;;
@@ -74,6 +79,11 @@ do
 		N) nat=1
 			SERVER_LOCAL_IP4ADDR=${OPTARG%%:*}
 			SERVER_PUBLIC_IP4ADDR=${OPTARG##*:}
+			;;
+		e)
+		        if [ "$OPTARG" -gt 0 ]; then
+				certexpiry=$OPTARG
+			fi
 			;;
 		*) usage_exit ;;
 	esac
@@ -311,11 +321,11 @@ JKS=$JKSDIR/truststore.jks
 
 backup_file "$KEY1" "$ts"
 backup_file "$CRT1" "$ts"
-gen_selfsigned_cert "$SERVER_FQDN" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY1" "$CRT1"
+gen_selfsigned_cert "$SERVER_FQDN" "$certexpiry" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY1" "$CRT1"
 
 backup_file "$KEY2" "$ts"
 backup_file "$CRT2" "$ts"
-gen_selfsigned_cert "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY2" "$CRT2"
+gen_selfsigned_cert "auth.$SERVER_FQDN" "$certexpiry" && chown prosody:prosody "$KEY2" "$CRT2"
 
 backup_file "$JKS" "$ts"
 [ -f "$JKS" ] && keytool -delete -noprompt -keystore $JKS -alias prosody -storepass changeit
