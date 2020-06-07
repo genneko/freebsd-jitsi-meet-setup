@@ -23,6 +23,8 @@ usage_exit() {
 		echoerr "$@"
 	fi
 	echoerr "usage: $prog [-aBpr] [-n LOCAL:PUBLIC] [-e DAYS] FQDN CERT_PATH KEY_PATH"
+	echoerr "       $prog -c [-e DAYS] FQDN"
+	echoerr
 	echoerr "       -a: use apache web server instead of nginx"
 	echoerr "       -B: do not backup existing files"
 	echoerr "       -p: install missing packages instead of exiting with an error."
@@ -30,7 +32,9 @@ usage_exit() {
 	echoerr "           (without this flag, any user can create a room)"
 	echoerr "       -N LOCAL:PUBLIC: specify local/public IPv4 addresses"
 	echoerr "	                 when using jitsi-meet behind a NAT"
+	echoerr "       -c: only renew self-signed certs used by prosody."
 	echoerr "       -e DAYS: duration of self-signed certs used by prosody (default 365)."
+	echoerr
 	exit 1
 }
 
@@ -63,17 +67,41 @@ backup_file() {
 	cp -p "$file" "$file.$ts"
 }
 
+CERTDIR=/var/db/prosody
+JKS=/usr/local/etc/jitsi/jicofo/truststore.jks
+
+renew_internal_certs() {
+	local fqdn=$1 expiry=$2 ts=$3 crt1 key1 crt2 key2
+	crt1=$CERTDIR/$fqdn.crt
+	key1=$CERTDIR/$fqdn.key
+	crt2=$CERTDIR/auth.$fqdn.crt
+	key2=$CERTDIR/auth.$fqdn.key
+	backup_file "$key1" "$ts"
+	backup_file "$crt1" "$ts"
+	gen_selfsigned_cert "$fqdn" "$expiry" "jitsi-videobridge.$fqdn" "conference.$fqdn" "focus.$fqdn" "auth.$fqdn" && chown prosody:prosody "$key1" "$crt1"
+
+	backup_file "$key2" "$ts"
+	backup_file "$crt2" "$ts"
+	gen_selfsigned_cert "auth.$fqdn" "$expiry" && chown prosody:prosody "$key2" "$crt2"
+
+	backup_file "$JKS" "$ts"
+	[ -f "$JKS" ] && keytool -delete -noprompt -keystore $JKS -alias prosody -storepass changeit
+	keytool -importcert -noprompt -keystore "$JKS" -alias prosody -storepass changeit -file "$crt2"
+}
+
 webserver=nginx
 dobackup=1
+onlyrenewcerts=0
 installpkg=0
 mkroom=anon
 nat=0
 certexpiry=365
-while getopts "aBprN:e:" opt
+while getopts "aBcprN:e:" opt
 do
 	case "$opt" in
 		a) webserver=apache24 ;;
 		B) dobackup=0 ;;
+		c) onlyrenewcerts=1 ;;
 		p) installpkg=1 ;;
 		r) mkroom=auth ;;
 		N) nat=1
@@ -89,6 +117,27 @@ do
 	esac
 done
 shift $(( OPTIND - 1 ))
+
+TS=$(date '+%F_%T')
+SERVER_FQDN=$1
+SERVER_CERT_PATH=$2
+SERVER_KEY_PATH=$3
+
+if [ -z "$SERVER_FQDN" ]; then
+	usage_exit "Please specify SERVER_FQDN (e.g. jitsi.example.com)."
+fi
+
+if [ $onlyrenewcerts -eq 1 ]; then
+	renew_internal_certs "$SERVER_FQDN" "$certexpiry" "$TS"
+	exit 0
+fi
+
+if [ -z "$SERVER_CERT_PATH" ]; then
+	usage_exit "Please specify SERVER_CERT_PATH (e.g. /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem)."
+fi
+if [ -z "$SERVER_KEY_PATH" ]; then
+	usage_exit "Please specify SERVER_KEY_PATH (e.g. /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem)."
+fi
 
 PRE_CONFIG_LIST=$(cat <<EOB
 usr/local/etc/pkg
@@ -146,25 +195,9 @@ if [ $nat -eq 1 ]; then
 usr/local/etc/jitsi/videobridge/sip-communicator.properties"
 fi
 
-SERVER_FQDN=$1
-SERVER_CERT_PATH=$2
-SERVER_KEY_PATH=$3
-
-if [ -z "$SERVER_FQDN" ]; then
-	usage_exit "Please specify SERVER_FQDN (e.g. jitsi.example.com)."
-fi
-if [ -z "$SERVER_CERT_PATH" ]; then
-	usage_exit "Please specify SERVER_CERT_PATH (e.g. /usr/local/etc/letsencrypt/live/jitsi.example.com/fullchain.pem)."
-fi
-if [ -z "$SERVER_KEY_PATH" ]; then
-	usage_exit "Please specify SERVER_KEY_PATH (e.g. /usr/local/etc/letsencrypt/live/jitsi.example.com/privkey.pem)."
-fi
-
 JVB_COMPONENT_SECRET=$(openssl rand -hex 16)
 FOCUS_COMPONENT_SECRET=$(openssl rand -hex 16)
 FOCUS_USER_SECRET=$(openssl rand -hex 16)
-
-TS=$(date '+%F_%T')
 
 cd "$bindir" || err_exit "ERROR: cannot chdir to $bindir."
 
@@ -278,7 +311,7 @@ for file in $CONFIG_LIST; do
 				rm -f "/$file.tmp"
 				continue
 			fi
-			backup_file "/$file" "$ts"
+			backup_file "/$file" "$TS"
 		fi
 		echoerr "NOTICE: install /$file"
 		cp -p "/$file.tmp" "/$file"
@@ -310,26 +343,7 @@ echoerr "###"
 sleep 1
 #prosodyctl cert generate $SERVER_FQDN
 #prosodyctl cert generate auth.$SERVER_FQDN
-
-CERTDIR=/var/db/prosody
-CRT1=$CERTDIR/$SERVER_FQDN.crt
-KEY1=$CERTDIR/$SERVER_FQDN.key
-CRT2=$CERTDIR/auth.$SERVER_FQDN.crt
-KEY2=$CERTDIR/auth.$SERVER_FQDN.key
-JKSDIR=/usr/local/etc/jitsi/jicofo
-JKS=$JKSDIR/truststore.jks
-
-backup_file "$KEY1" "$ts"
-backup_file "$CRT1" "$ts"
-gen_selfsigned_cert "$SERVER_FQDN" "$certexpiry" "jitsi-videobridge.$SERVER_FQDN" "conference.$SERVER_FQDN" "focus.$SERVER_FQDN" "auth.$SERVER_FQDN" && chown prosody:prosody "$KEY1" "$CRT1"
-
-backup_file "$KEY2" "$ts"
-backup_file "$CRT2" "$ts"
-gen_selfsigned_cert "auth.$SERVER_FQDN" "$certexpiry" && chown prosody:prosody "$KEY2" "$CRT2"
-
-backup_file "$JKS" "$ts"
-[ -f "$JKS" ] && keytool -delete -noprompt -keystore $JKS -alias prosody -storepass changeit
-keytool -importcert -noprompt -keystore "$JKS" -alias prosody -storepass changeit -file "$CRT2"
+renew_internal_certs "$SERVER_FQDN" "$certexpiry" "$TS"
 
 echoerr
 echoerr "###"
